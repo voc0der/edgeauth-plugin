@@ -1,5 +1,4 @@
 name: build-plugin
-
 on:
   push:
     branches: [ main, master ]
@@ -8,30 +7,15 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
 
       - name: Restore
         run: dotnet restore src/EdgeAuth/EdgeAuth.csproj
-
-      - name: Sanity check source layout
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "SHA: $GITHUB_SHA"
-          git ls-files | sort
-          echo "---- grep for obsolete overrides (fixed-string) ----"
-          (grep -RniF 'RegisterServices(IServiceCollection' src || true)
-          (grep -RniF 'OnApplicationStartup(IServiceProvider' src || true)
-          echo "---- show Plugin.cs ----"
-          sed -n '1,200p' src/EdgeAuth/Plugin.cs || true
 
       - name: Build (Release)
         run: dotnet build src/EdgeAuth/EdgeAuth.csproj -c Release --no-restore
@@ -40,11 +24,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          outdir="dist/EdgeAuth"
-          mkdir -p "$outdir"
-          cp src/EdgeAuth/bin/Release/net8.0/EdgeAuth.dll "$outdir/"
-          cp src/EdgeAuth/plugin.json "$outdir/"
-          ( cd dist && zip -r "edgeauth-${GITHUB_SHA}.zip" EdgeAuth )
+          rm -rf dist
+          mkdir -p dist/EdgeAuth
+          cp src/EdgeAuth/bin/Release/net8.0/EdgeAuth.dll dist/EdgeAuth/
+          cp src/EdgeAuth/plugin.json dist/EdgeAuth/
+          # ensure no old zip left around, then zip ONLY the EdgeAuth folder
+          rm -f dist/edgeauth-*.zip
+          ( cd dist && zip -r -9 "edgeauth-${GITHUB_SHA}.zip" EdgeAuth )
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
