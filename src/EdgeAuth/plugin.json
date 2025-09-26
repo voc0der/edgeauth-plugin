@@ -1,0 +1,11 @@
+{
+  "name": "EdgeAuth",
+  "version": "0.1.0",
+  "targetAbi": 10,
+  "description": "Reverse-proxy auth bridge for Jellyfin (token + ephemeral IP allow).",
+  "id": "com.netspace.edgeauth",
+  "overview": "Lets an edge proxy (nginx) auth_request this plugin to validate Jellyfin tokens or a short-lived IP allow entry.",
+  "owner": "you",
+  "category": "Security",
+  "status": "beta"
+}
