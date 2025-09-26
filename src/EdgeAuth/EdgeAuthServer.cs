@@ -1,5 +1,6 @@
 using System;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using MediaBrowser.Controller.Session;
@@ -161,16 +162,51 @@ namespace Jellyfin.Plugin.EdgeAuth
             return "";
         }
 
-        private static async Task<bool> TokenValidAsync(MediaBrowser.Controller.Session.ISessionManager sessions, string token)
+        private static async Task<bool> TokenValidAsync(ISessionManager sessions, string token)
         {
-            if (string.IsNullOrWhiteSpace(token)) return false;
+            // If there's no token, it's not valid.
+            if (string.IsNullOrWhiteSpace(token))
+                return false;
+        
+            // We avoid relying on Jellyfin-internal GetSessionByAuthenticationToken signature differences
+            // across releases and instead call the stable HTTP API. You can point to the local server or
+            // to your published URL. Prefer an internal URL (e.g., http://127.0.0.1:8096) for reliability.
+            //
+            // Configure one of these (first non-empty wins):
+            //   - EDGEAUTH_JF_BASEURL (e.g., http://127.0.0.1:8096)
+            //   - JELLYFIN_PublishedServerUrl (if you already set this; we’ll try it)
+            var baseUrl =
+                Environment.GetEnvironmentVariable("EDGEAUTH_JF_BASEURL")
+                ?? Environment.GetEnvironmentVariable("JELLYFIN_PublishedServerUrl");
+        
+            if (string.IsNullOrWhiteSpace(baseUrl))
+            {
+                // No base URL configured -> we can’t validate the token here. Return false and let IP-temp allow handle it.
+                return false;
+            }
+        
+            baseUrl = baseUrl.TrimEnd('/');
+        
             try
             {
-                var session = await sessions.GetSessionByAuthenticationToken(token, CancellationToken.None).ConfigureAwait(false);
-                return session != null && session.UserId.HasValue;
+                using var http = new HttpClient();
+                var req = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/Users/Me");
+        
+                // Support the common Jellyfin auth header patterns
+                // Any one of these is enough; /Users/Me will 200 only on valid token.
+                req.Headers.TryAddWithoutValidation("X-Emby-Token", token);
+                req.Headers.TryAddWithoutValidation("X-MediaBrowser-Token", token);
+                req.Headers.TryAddWithoutValidation(
+                    "Authorization",
+                    $"MediaBrowser Client=\"EdgeAuth\", Device=\"EdgeAuth\", DeviceId=\"EdgeAuth\", Version=\"0.1\", Token=\"{token}\""
+                );
+        
+                using var resp = await http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
+                return resp.IsSuccessStatusCode; // 200 means token is valid
             }
             catch
             {
+                // Network or other failure -> play it safe
                 return false;
             }
         }
