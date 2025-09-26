@@ -1,0 +1,38 @@
+name: build-plugin
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore src/EdgeAuth/EdgeAuth.csproj
+
+      - name: Build (Release)
+        run: dotnet build src/EdgeAuth/EdgeAuth.csproj -c Release --no-restore
+
+      - name: Package artifact
+        run: |
+          mkdir -p dist/EdgeAuth
+          cp src/EdgeAuth/bin/Release/net8.0/EdgeAuth.dll dist/EdgeAuth/
+          cp src/EdgeAuth/plugin.json dist/EdgeAuth/
+          cd dist && zip -r "EdgeAuth-${GITHUB_SHA}.zip" EdgeAuth
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: EdgeAuth-${{ github.sha }}
+          path: dist/EdgeAuth-*.zip
