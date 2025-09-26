@@ -30,8 +30,7 @@ namespace Jellyfin.Plugin.EdgeAuth
                 {
                     webBuilder.UseKestrel(opt =>
                     {
-                        // Bind localhost only; keep firewall-closed too.
-                        opt.Listen(IPAddress.Loopback, 5577);
+                        opt.Listen(IPAddress.Any, 5577);
                     });
 
                     webBuilder.Configure(app =>
