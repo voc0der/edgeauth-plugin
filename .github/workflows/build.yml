@@ -16,18 +16,20 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: 8.0.x
 
       - name: Restore
         run: dotnet restore src/EdgeAuth/EdgeAuth.csproj
-        
+
       - name: Sanity check source layout
+        shell: bash
         run: |
+          set -euo pipefail
           echo "SHA: $GITHUB_SHA"
           git ls-files | sort
-          echo "---- grep for obsolete overrides ----"
-          (grep -Rni "RegisterServices\\(IServiceCollection" src || true)
-          (grep -Rni "OnApplicationStartup\\(IServiceProvider" src || true)
+          echo "---- grep for obsolete overrides (fixed-string) ----"
+          (grep -RniF 'RegisterServices(IServiceCollection' src || true)
+          (grep -RniF 'OnApplicationStartup(IServiceProvider' src || true)
           echo "---- show Plugin.cs ----"
           sed -n '1,200p' src/EdgeAuth/Plugin.cs || true
 
@@ -35,14 +37,19 @@ jobs:
         run: dotnet build src/EdgeAuth/EdgeAuth.csproj -c Release --no-restore
 
       - name: Package artifact
+        shell: bash
         run: |
-          mkdir -p dist/EdgeAuth
-          cp src/EdgeAuth/bin/Release/net8.0/EdgeAuth.dll dist/EdgeAuth/
-          cp src/EdgeAuth/plugin.json dist/EdgeAuth/
-          cd dist && zip -r "EdgeAuth-${GITHUB_SHA}.zip" EdgeAuth
+          set -euo pipefail
+          outdir="dist/EdgeAuth"
+          mkdir -p "$outdir"
+          cp src/EdgeAuth/bin/Release/net8.0/EdgeAuth.dll "$outdir/"
+          cp src/EdgeAuth/plugin.json "$outdir/"
+          ( cd dist && zip -r "edgeauth-${GITHUB_SHA}.zip" EdgeAuth )
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: EdgeAuth-${{ github.sha }}
-          path: dist/EdgeAuth-*.zip
+          name: edgeauth-${{ github.sha }}
+          path: dist/edgeauth-*.zip
+          if-no-files-found: error
+          retention-days: 7
