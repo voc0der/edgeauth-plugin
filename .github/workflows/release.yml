@@ -1,0 +1,43 @@
+name: release-plugin
+
+on:
+  push:
+    tags:
+      - 'v*'   # e.g., v0.1.0
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore src/EdgeAuth/EdgeAuth.csproj
+
+      - name: Build (Release)
+        run: dotnet build src/EdgeAuth/EdgeAuth.csproj -c Release --no-restore
+
+      - name: Package artifact
+        run: |
+          VERSION="${GITHUB_REF##*/}"   # tag name (e.g., v0.1.0)
+          mkdir -p dist/EdgeAuth
+          cp src/EdgeAuth/bin/Release/net8.0/EdgeAuth.dll dist/EdgeAuth/
+          cp src/EdgeAuth/plugin.json dist/EdgeAuth/
+          cd dist && zip -r "EdgeAuth-${VERSION}.zip" EdgeAuth
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/EdgeAuth-*.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
