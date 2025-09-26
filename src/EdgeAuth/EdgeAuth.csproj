@@ -6,19 +6,14 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <Version>0.1.0</Version>
     <LangVersion>12.0</LangVersion>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- IMPORTANT: set versions to match your Jellyfin server. Use 'dotnet list package --outdated' after first restore. -->
     <PackageReference Include="MediaBrowser.Common" Version="10.9.0" />
     <PackageReference Include="MediaBrowser.Controller" Version="10.9.0" />
     <PackageReference Include="MediaBrowser.Model" Version="10.9.0" />
-    <!-- Hosting Kestrel inside plugin for early POC; you can remove when mapping plugin endpoints directly -->
-    <PackageReference Include="Microsoft.AspNetCore.App.Ref" Version="8.0.8" />
-    <PackageReference Include="Microsoft.AspNetCore" Version="2.2.0" />
+    <!-- Use the shared framework that provides Kestrel/ASP.NET Core APIs -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
-
-  <PropertyGroup>
-    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-  </PropertyGroup>
 </Project>
