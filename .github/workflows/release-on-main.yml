@@ -5,24 +5,23 @@ on:
     branches: [ main, master ]
 
 permissions:
-  contents: write  # needed to create releases/tags
+  contents: write
 
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # we need history to diff commits
+          fetch-depth: 0
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
 
-      - name: Determine next version (semantic from commits)
+      # --- decide version from commits (same logic as before) ---
+      - name: Determine next version
         id: semver
         uses: actions/github-script@v7
         with:
@@ -30,72 +29,33 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
 
-            // 1) Find the latest tag or release
             let latestTag = null;
-            try {
-              // try latest release first
-              const rel = await github.rest.repos.getLatestRelease({ owner, repo });
-              latestTag = rel.data.tag_name;
-            } catch (e) {
-              // no releases yet; fall back to latest tag
+            try { latestTag = (await github.rest.repos.getLatestRelease({ owner, repo })).data.tag_name; }
+            catch (e) {
               const tags = await github.rest.repos.listTags({ owner, repo, per_page: 1 });
               if (tags.data.length > 0) latestTag = tags.data[0].name;
             }
 
-            // Parse semver from tag like "vX.Y.Z"
-            function parseSemver(tag) {
-              if (!tag) return { major: 0, minor: 0, patch: 0 };
-              const m = tag.match(/^v?(\d+)\.(\d+)\.(\d+)$/);
-              if (!m) return { major: 0, minor: 0, patch: 0 };
-              return { major: +m[1], minor: +m[2], patch: +m[3] };
-            }
+            function parse(tag){ const m = /^v?(\d+)\.(\d+)\.(\d+)$/.exec(tag||''); return m?{major:+m[1],minor:+m[2],patch:+m[3]}:{major:0,minor:0,patch:0}; }
+            const base = context.payload.before, head = context.payload.after;
+            let commits=[];
+            try { commits = (await github.rest.repos.compareCommits({owner,repo,base,head})).data.commits||[]; }
+            catch (e) { if (context.payload.head_commit) commits=[context.payload.head_commit]; }
 
-            // 2) Get commits in this push
-            // For push events, we have "before" and "after" SHAs
-            const base = context.payload.before;
-            const head = context.payload.after;
-
-            let commits = [];
-            try {
-              const cmp = await github.rest.repos.compareCommits({
-                owner, repo, base, head
-              });
-              commits = cmp.data.commits || [];
-            } catch (e) {
-              // fallback: single commit
-              if (context.payload.head_commit) commits = [context.payload.head_commit];
-            }
-
-            // 3) Determine bump per Conventional Commits
-            // - "BREAKING CHANGE" or a "!" after type → major
-            // - "feat" → minor
-            // - else → patch
-            let bump = "patch";
+            let bump="patch";
             for (const c of commits) {
               const msg = (c.commit?.message || c.message || "").toLowerCase();
-              if (msg.includes("breaking change") || /!\:/.test(msg.split("\n")[0])) {
-                bump = "major"; break;
-              }
-              if (bump !== "major" && /^feat(\(|:)/.test(msg.split("\n")[0])) {
-                bump = "minor";
-              }
+              const first = msg.split("\n")[0];
+              if (msg.includes("breaking change") || /!\:/.test(first)) { bump="major"; break; }
+              if (bump!=="major" && /^feat(\(|:)/.test(first)) bump="minor";
             }
-
-            const cur = parseSemver(latestTag);
-            let next = { ...cur };
-            if (!latestTag) {
-              // first release
-              next = { major: 0, minor: 1, patch: 0 };
-            } else if (bump === "major") {
-              next.major += 1; next.minor = 0; next.patch = 0;
-            } else if (bump === "minor") {
-              next.minor += 1; next.patch = 0;
-            } else {
-              next.patch += 1;
-            }
-
-            const nextTag = `v${next.major}.${next.minor}.${next.patch}`;
-            core.setOutput('next_tag', nextTag);
+            const cur=parse(latestTag); let next={...cur};
+            if (!latestTag) next={major:0,minor:1,patch:0};
+            else if (bump==="major") { next.major++; next.minor=0; next.patch=0; }
+            else if (bump==="minor") { next.minor++; next.patch=0; }
+            else { next.patch++; }
+            const tag=`v${next.major}.${next.minor}.${next.patch}`;
+            core.setOutput('tag', tag);
             core.setOutput('version', `${next.major}.${next.minor}.${next.patch}`);
 
       - name: Restore
@@ -112,12 +72,18 @@ jobs:
           mkdir -p dist/EdgeAuth
           cp src/EdgeAuth/bin/Release/net8.0/EdgeAuth.dll dist/EdgeAuth/
           cp src/EdgeAuth/plugin.json dist/EdgeAuth/
-          ( cd dist && zip -r -9 "edgeauth-${{ steps.semver.outputs.next_tag }}.zip" EdgeAuth )
+          ( cd dist && zip -r -9 "edgeauth-plugin-${{ steps.semver.outputs.tag }}.zip" EdgeAuth )
+          echo "== dist listing =="
+          ls -l dist
+          echo "== zip contents =="
+          unzip -l "dist/edgeauth-plugin-${{ steps.semver.outputs.tag }}.zip"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.semver.outputs.next_tag }}
-          name: ${{ steps.semver.outputs.next_tag }}
-          files: dist/edgeauth-${{ steps.semver.outputs.next_tag }}.zip
+          tag_name: ${{ steps.semver.outputs.tag }}
+          name: ${{ steps.semver.outputs.tag }}
+          files: dist/edgeauth-plugin-${{ steps.semver.outputs.tag }}.zip
+          fail_on_unmatched_files: true
           generate_release_notes: true
+          make_latest: true
