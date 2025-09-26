@@ -1,4 +1,4 @@
-using Jellyfin.Common.Plugins;              // <-- correct namespace for IPluginServiceRegistrator
+using MediaBrowser.Common.Plugins;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
