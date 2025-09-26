@@ -1,7 +1,8 @@
 // src/EdgeAuth/Plugin.cs
-using MediaBrowser.Common;
+using MediaBrowser.Common.Configuration;  // IApplicationPaths
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Plugins;
+using MediaBrowser.Model.Serialization;    // IXmlSerializer
 
 namespace Jellyfin.Plugin.EdgeAuth
 {
@@ -10,7 +11,10 @@ namespace Jellyfin.Plugin.EdgeAuth
         public override string Name => "EdgeAuth";
         public override string Description => "Reverse-proxy auth bridge (token + ephemeral IP allow).";
 
-        public Plugin(IApplicationHost host) : base(host) { }
+        public Plugin(IApplicationPaths paths, IXmlSerializer xml)
+            : base(paths, xml)
+        {
+        }
     }
 
     public class PluginConfiguration : BasePluginConfiguration
