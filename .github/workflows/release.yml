@@ -1,24 +1,20 @@
-name: release-plugin
-
+name: release
 on:
   push:
     tags:
-      - 'v*'   # e.g., v0.1.0
+      - 'v*'   # push e.g. v0.1.0
 
 jobs:
-  release:
+  build-and-release:
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: write   # needed to create a release
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: 8.0.x
 
       - name: Restore
         run: dotnet restore src/EdgeAuth/EdgeAuth.csproj
@@ -26,18 +22,18 @@ jobs:
       - name: Build (Release)
         run: dotnet build src/EdgeAuth/EdgeAuth.csproj -c Release --no-restore
 
-      - name: Package artifact
+      - name: Stage plugin files
+        shell: bash
         run: |
-          VERSION="${GITHUB_REF##*/}"   # tag name (e.g., v0.1.0)
+          set -euo pipefail
+          rm -rf dist
           mkdir -p dist/EdgeAuth
           cp src/EdgeAuth/bin/Release/net8.0/EdgeAuth.dll dist/EdgeAuth/
           cp src/EdgeAuth/plugin.json dist/EdgeAuth/
-          cd dist && zip -r "EdgeAuth-${VERSION}.zip" EdgeAuth
+          ( cd dist && zip -r -9 "edgeauth-${GITHUB_REF_NAME}.zip" EdgeAuth )
 
-      - name: Create GitHub Release
+      - name: Upload release asset
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/EdgeAuth-*.zip
+          files: dist/edgeauth-*.zip
           generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
