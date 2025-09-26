@@ -20,6 +20,16 @@ jobs:
 
       - name: Restore
         run: dotnet restore src/EdgeAuth/EdgeAuth.csproj
+        
+      - name: Sanity check source layout
+        run: |
+          echo "SHA: $GITHUB_SHA"
+          git ls-files | sort
+          echo "---- grep for obsolete overrides ----"
+          (grep -Rni "RegisterServices\\(IServiceCollection" src || true)
+          (grep -Rni "OnApplicationStartup\\(IServiceProvider" src || true)
+          echo "---- show Plugin.cs ----"
+          sed -n '1,200p' src/EdgeAuth/Plugin.cs || true
 
       - name: Build (Release)
         run: dotnet build src/EdgeAuth/EdgeAuth.csproj -c Release --no-restore
