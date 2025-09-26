@@ -1,17 +1,18 @@
 // src/EdgeAuth/ServiceRegistrator.cs
-using MediaBrowser.Common.Plugins;
-using MediaBrowser.Controller;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Jellyfin.Plugin.EdgeAuth;
-
-public sealed class ServiceRegistrator : IPluginServiceRegistrator
+namespace Jellyfin.Plugin.EdgeAuth
 {
-    public void RegisterServices(IServiceCollection services, IServerApplicationHost appHost)
+    // Note the fully-qualified interface name below:
+    public sealed class ServiceRegistrator : MediaBrowser.Common.Plugins.IPluginServiceRegistrator
     {
-        services.AddSingleton<IEdgeAuthStore, MemoryEdgeAuthStore>();
-        services.AddSingleton<EdgeAuthServer>();
-        // (Optional) if you later switch to a HostedService to start the Kestrel listener:
-        // services.AddHostedService<EdgeAuthHostedService>();
+        public void RegisterServices(IServiceCollection services)
+        {
+            // Core services for EdgeAuth
+            services.AddSingleton<IEdgeAuthStore, MemoryEdgeAuthStore>();
+
+            // Hosted service that starts the internal Kestrel listener
+            services.AddHostedService<EdgeAuthHostedService>();
+        }
     }
 }
