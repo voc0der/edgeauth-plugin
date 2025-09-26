@@ -14,13 +14,9 @@ namespace Jellyfin.Plugin.EdgeAuth
 
     public class PluginConfiguration : BasePluginConfiguration
     {
-        // Leave blank — provide at runtime via env var (EDGEAUTH_ADMIN_SECRET) or persisted plugin config.
-        public string AdminSecret { get; set; } = "";
-
+        public string AdminSecret { get; set; } = "";  // set at runtime
         public int DefaultTtlSeconds { get; set; } = 300;
         public int AdminHmacSkewSeconds { get; set; } = 60;
-
-        // Reserved for future use
         public bool StrictLoginOnly { get; set; } = false;
     }
 }
