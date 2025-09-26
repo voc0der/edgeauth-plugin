@@ -161,12 +161,12 @@ namespace Jellyfin.Plugin.EdgeAuth
             return "";
         }
 
-        private static async Task<bool> TokenValidAsync(ISessionManager sessions, string token)
+        private static async Task<bool> TokenValidAsync(MediaBrowser.Controller.Session.ISessionManager sessions, string token)
         {
             if (string.IsNullOrWhiteSpace(token)) return false;
             try
             {
-                var session = await sessions.GetSessionByAuthenticationToken(token).ConfigureAwait(false);
+                var session = await sessions.GetSessionByAuthenticationToken(token, CancellationToken.None).ConfigureAwait(false);
                 return session != null && session.UserId.HasValue;
             }
             catch
