@@ -1,0 +1,20 @@
+[
+  {
+    "category": "General",
+    "guid": "YOUR-PLUGIN-GUID-HERE",
+    "name": "EdgeAuth",
+    "owner": "voc0der",
+    "overview": "Reverse-proxy auth bridge (token + ephemeral IP allow)",
+    "description": "Validates Emby/Jellyfin tokens at the edge and supports short-lived IP safelists via HMAC’d admin calls.",
+    "versions": [
+      {
+        "version": "0.1.0",
+        "targetAbi": "10.10.0.0",
+        "sourceUrl": "https://github.com/voc0der/edgeauth-plugin/releases/download/v0.1.0/EdgeAuth-v0.1.0.zip",
+        "changelog": "Initial public build",
+        "timestamp": "2025-09-26 00:00:00",
+        "checksum": "SHA256: REPLACE_WITH_SHA256_OF_ZIP"
+      }
+    ]
+  }
+]
