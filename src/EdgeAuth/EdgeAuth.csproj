@@ -10,10 +10,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MediaBrowser.Common" Version="10.9.0" />
-    <PackageReference Include="MediaBrowser.Controller" Version="10.9.0" />
-    <PackageReference Include="MediaBrowser.Model" Version="10.9.0" />
-    <!-- Use the shared framework that provides Kestrel/ASP.NET Core APIs -->
+    <!-- Use Jellyfin.* packages from NuGet; they expose MediaBrowser.* namespaces -->
+    <PackageReference Include="Jellyfin.Common" Version="10.10.7" />
+    <PackageReference Include="Jellyfin.Controller" Version="10.10.7" />
+    <PackageReference Include="Jellyfin.Model" Version="10.10.7" />
+
+    <!-- ASP.NET Core framework (for Kestrel/minimal APIs) -->
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 </Project>
